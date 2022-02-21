@@ -1,5 +1,5 @@
 const express = require('express');
-const {RtcTokenBuilder, RtcRole} = require('agora-access-token');
+const {RtcTokenBuilder, RtcRole, RtmRole, RtmTokenBuilder} = require('agora-access-token');
 require('dotenv').config()
 
 const app = express();
@@ -15,7 +15,8 @@ const nocache = (_, resp, next) => {
 const generateRTCToken = (req, resp) => { 
     resp.header('Acess-Control-Allow-Origin', '*');
 
-    const channelName = req.params.channel;
+  const channelName = req.params.channel;
+  console.log("channel name is: " + channelName);
     if (!channelName) {
       return resp.status(500).json({ 'error': 'channel is required' });
     }
@@ -51,11 +52,27 @@ const generateRTCToken = (req, resp) => {
       token = RtcTokenBuilder.buildTokenWithUid(process.env.APP_ID, process.env.APP_CERTIFICATE, channelName, uid, role, privilegeExpireTime);
     } else {
       return resp.status(500).json({ 'error': 'token type is invalid' });
-    }
+  }
+  console.log("the token returned is: ", token);
     return resp.json({ 'rtcToken': token });
 };
 
+
+const generateRTMToken = (req, resp) => { 
+  const user = req.params.uid
+  const role = RtmRole.Rtm_User;
+  const expirationTimeInSeconds = 3600;
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const expirationTimestamp = currentTimestamp + expirationTimeInSeconds;
+
+  const token = RtmTokenBuilder.buildToken(process.env.APP_ID, process.env.APP_CERTIFICATE, user, role, expirationTimestamp);
+  return resp.json({ 'rtmToken': token });
+};
+
+
 app.get('/rtc/:channel/:role/:tokentype/:uid', nocache , generateRTCToken)
+app.get('/rtm/:uid', nocache , generateRTMToken)
+
 
 app.listen(process.env.PORT, () => {
     console.log(`Listening on port: ${process.env.PORT}`);
